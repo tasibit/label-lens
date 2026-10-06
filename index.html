@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b5e20">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' data: blob:; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Label Lens 配料镜</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./styles.css?v=20261006d">
+</head>
+<body>
+
+<header class="app-header">
+  <h1>Label Lens 配料镜</h1>
+  <button type="button" class="icon-btn" id="historyBtn" title="History" aria-label="History">🕑</button>
+</header>
+
+<main>
+
+  <!-- SCAN TAB -->
+  <section class="tab-panel active" id="tab-scan" data-tab="scan">
+    <h2 class="section-title">Scan 扫描</h2>
+    <div class="card">
+      <div class="preview-wrap" id="previewWrap">
+        <div class="preview-placeholder" id="previewPlaceholder">No photo yet. Photograph the 配料 (ingredients) panel. You can add several photos of the same pack — the best-read list is used.</div>
+        <canvas id="previewCanvas" class="hidden"></canvas>
+      </div>
+
+      <div class="photo-strip hidden" id="photoStrip" data-test="photo-strip"></div>
+      <p class="crop-hint" id="cropHint">Tip: drag a box around just the ingredient text for a sharper read.</p>
+      <input type="file" accept="image/*" capture="environment" id="fileInputCamera" class="hidden">
+      <input type="file" accept="image/*" multiple id="fileInputGallery" class="hidden" data-test="file-input">
+
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="btnPhotograph">📷 Photograph the 配料 panel</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn block" id="btnGallery">🖼️ Choose from gallery</button>
+      </div>
+      <div class="btn-row hidden" id="addPhotoRow">
+        <button type="button" class="btn" id="btnAddPhoto" data-test="add-photo">➕ Add another: camera</button>
+        <button type="button" class="btn" id="btnAddGallery" data-test="add-gallery">➕ Add another: gallery</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn block" id="btnLiveScan" data-test="live-scan">🎥 Live scan — turn the pack slowly in front of the camera</button>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn" id="btnRotate" disabled>↺ Rotate</button>
+        <button type="button" class="btn" id="btnEnhance" disabled aria-pressed="true">✨ Enhance: On</button>
+        <button type="button" class="btn hidden" id="btnClearCrop">✂ Clear box</button>
+        <button type="button" class="btn hidden" id="btnClearPhotos">🗑 Clear photos</button>
+      </div>
+
+      <div class="field">
+        <label for="ocrLang">OCR language</label>
+        <select id="ocrLang">
+          <option value="chi_sim">Simplified Chinese</option>
+          <option value="chi_tra">Traditional Chinese</option>
+          <option value="chi_sim+chi_tra">Both</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="setOcrEngine">OCR engine</label>
+        <select id="setOcrEngine">
+          <option value="auto">Auto — GB10 server (PP-OCR) when online, phone when offline</option>
+          <option value="device">Phone only (Tesseract, works offline)</option>
+        </select>
+      </div>
+
+      <div class="toggle-row">
+        <label for="blockMode">Block mode (tight crop of just the text)</label>
+        <input type="checkbox" id="blockMode" checked>
+      </div>
+
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="btnReadText" disabled data-test="ocr-run">Read text</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn block" id="btnAiRead" data-test="ai-read">🤖 AI vision read (GB10, ~5 s) — for glare, blur, curved packs</button>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
+        <div class="progress-label" id="progressLabel">&nbsp;</div>
+      </div>
+
+      <div class="ocr-error hidden" id="ocrError" role="alert"></div>
+      <details class="ocr-debug hidden" id="ocrDebug"><summary>Debug info (show this if OCR misbehaves)</summary><pre id="ocrDebugText"></pre><button type="button" class="btn" id="btnCopyDebug">Copy debug info</button></details>
+      <div class="field">
+        <label for="scanTextarea">OCR text (editable — fix misreads, then re-analyze)</label>
+        <textarea id="scanTextarea" rows="6" placeholder="Recognized text will appear here. You can also type or paste text directly." data-test="ocr-text"></textarea>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="btnAnalyzeScan">Analyze</button>
+      </div>
+
+      <p class="tip-line">Sharper results: fill the frame with just the ingredient text, avoid glare. Or use your
+        phone's own text extraction (Gallery → "Extract text", Lens) and paste it in the Paste tab.</p>
+    </div>
+  </section>
+
+  <!-- PASTE TAB -->
+  <section class="tab-panel" id="tab-paste" data-tab="paste">
+    <h2 class="section-title">Paste 粘贴</h2>
+    <div class="card">
+      <div class="field">
+        <label for="pasteTextarea">Paste the ingredient list text</label>
+        <textarea id="pasteTextarea" rows="8" placeholder="粘贴配料表文字…" data-test="paste-text"></textarea>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn primary" id="btnAnalyzePaste" data-test="paste-analyze">Analyze</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GLOSSARY TAB -->
+  <section class="tab-panel" id="tab-glossary" data-tab="glossary">
+    <h2 class="section-title">Glossary 词典</h2>
+    <div class="card">
+      <div class="search-bar">
+        <input type="text" id="glossarySearch" placeholder="Search Chinese, pinyin or English…" data-test="glossary-search">
+      </div>
+      <div class="filter-chips" id="glossaryFilters"></div>
+      <div id="glossaryList" data-test="glossary-list"></div>
+      <div class="btn-row hidden" id="glossaryMoreWrap">
+        <button type="button" class="btn block" id="glossaryMoreBtn">Show more</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHRASES TAB -->
+  <section class="tab-panel" id="tab-phrases" data-tab="phrases">
+    <h2 class="section-title">Phrases 常用语</h2>
+    <div class="card" id="phrasesList" data-test="phrases-list"></div>
+  </section>
+
+  <!-- SETTINGS TAB -->
+  <section class="tab-panel" id="tab-settings" data-tab="settings">
+    <h2 class="section-title">Settings 设置</h2>
+    <div class="card">
+      <div class="toggle-row">
+        <label for="setSeafoodStrict">Hanafi: flag non-fish seafood</label>
+        <input type="checkbox" id="setSeafoodStrict">
+      </div>
+      <div class="toggle-row">
+        <label for="setFlagFlavourings">Flag generic flavourings/aromas as caution</label>
+        <input type="checkbox" id="setFlagFlavourings">
+      </div>
+      <div class="field">
+        <label for="setOcrLangDefault">Default OCR language</label>
+        <select id="setOcrLangDefault">
+          <option value="chi_sim">Simplified Chinese</option>
+          <option value="chi_tra">Traditional Chinese</option>
+          <option value="chi_sim+chi_tra">Both</option>
+        </select>
+      </div>
+      <div class="toggle-row">
+        <label for="setEnhanceDefault">Enhance default</label>
+        <input type="checkbox" id="setEnhanceDefault">
+      </div>
+      <div class="toggle-row">
+        <label for="setSavePhotos">Keep a copy of camera photos in Downloads (shows in Gallery)</label>
+        <input type="checkbox" id="setSavePhotos">
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn block" id="btnClearHistory">Clear history</button>
+      </div>
+    </div>
+    <div class="card about-block">
+      <p><strong>About Label Lens</strong></p><p class="muted small">Reads Chinese ingredient labels and explains them for Muslim travellers. A reading aid, not a certification.</p>
+      <p id="aboutVersions">—</p>
+      <p>Guide only. OCR can misread; verify against the label. No detection ≠ certification.</p>
+      <p><a href="#" id="aboutBlueprintLink">About this app's disclaimer</a></p>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tab-bar" id="tabBar">
+  <button type="button" data-tab="scan" data-test="tab-scan" class="active"><span class="tab-icon">📷</span>Scan</button>
+  <button type="button" data-tab="paste" data-test="tab-paste"><span class="tab-icon">📋</span>Paste</button>
+  <button type="button" data-tab="glossary" data-test="tab-glossary"><span class="tab-icon">📖</span>Glossary</button>
+  <button type="button" data-tab="phrases" data-test="tab-phrases"><span class="tab-icon">💬</span>Phrases</button>
+  <button type="button" data-tab="settings" data-test="tab-settings"><span class="tab-icon">⚙️</span>Settings</button>
+</nav>
+
+<!-- RESULTS PANEL (overlay, shared by Scan + Paste) -->
+<section id="resultsPanel" class="hidden">
+  <div class="results-header">
+    <button type="button" class="icon-btn" id="resultsBackBtn" aria-label="Back">←</button>
+    <strong>Result</strong>
+  </div>
+  <div class="results-body" id="resultsBody"></div>
+</section>
+
+<!-- LIVE SCAN PANEL -->
+<section id="livePanel" class="hidden">
+  <div class="live-video-wrap">
+    <video id="liveVideo" playsinline muted autoplay></video>
+    <div class="live-guide" aria-hidden="true"></div>
+    <div class="live-status" id="liveStatus" data-test="live-status">Starting camera…</div>
+  </div>
+  <div class="live-findings" id="liveFindings"></div>
+  <div class="live-actions">
+    <button type="button" class="btn" id="liveCancelBtn">Cancel</button>
+    <button type="button" class="btn primary" id="liveFinishBtn" data-test="live-finish">Finish &amp; show result</button>
+  </div>
+</section>
+
+<!-- HISTORY PANEL -->
+<section id="historyPanel" class="hidden">
+  <div class="results-header">
+    <button type="button" class="icon-btn" id="historyBackBtn" aria-label="Back">←</button>
+    <strong style="flex:1 1 auto;">History</strong>
+    <button type="button" class="btn" id="historyClearAllBtn">Clear all</button>
+  </div>
+  <div class="results-body" id="historyBody"></div>
+</section>
+
+<!-- PHRASE FULL-SCREEN CARD -->
+<section id="phraseCard" class="hidden">
+  <div class="phrase-zh" id="phraseCardZh"></div>
+  <div class="phrase-py" id="phraseCardPy"></div>
+  <div class="phrase-en" id="phraseCardEn"></div>
+  <button type="button" class="btn" id="phraseCardClose">Close</button>
+</section>
+
+<script src="./db.js?v=20261006d"></script>
+<script src="./db_ok.js?v=20261006d"></script>
+<script src="./db_codes.js?v=20261006d"></script>
+<script src="./db_products.js?v=20261006d"></script>
+<script src="./analyzer.js?v=20261006d"></script>
+<script src="./vendor/tesseract/tesseract.min.js"></script>
+<script src="./ocr.js?v=20261006d"></script>
+<script src="./app.js?v=20261006d"></script>
+</body>
+</html>
