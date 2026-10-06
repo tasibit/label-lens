@@ -804,8 +804,8 @@
   }
   if (HC_PUBLIC) {
     byId('btnAiRead').style.display = 'none'; byId('btnLiveScan').style.display = 'none';
-    var eng = byId('ocrEngine'); if (eng) { eng.value = 'device'; eng.disabled = true; var o = eng.querySelector('option[value="device"]'); if (o) o.textContent = 'Phone only — this public copy has no server'; }
-    var tip = document.querySelector('.scan-tip, #scanTip'); if (tip) tip.textContent = 'Public copy: text is read on the phone. Fill the frame with the 配料 lines, or drag a box around them; for a cleaner read use the phone\'s own text extraction and the Paste tab.';
+    var eng = byId('setOcrEngine'); if (eng) { eng.value = 'device'; eng.disabled = true; var o = eng.querySelector('option[value="device"]'); if (o) o.textContent = 'Phone only — this public copy has no server'; }
+    var tip = byId('cropHint'); if (tip) tip.textContent = 'Public copy: text is read on the phone. Fill the frame with the 配料 lines, or drag a box around them; for a cleaner read use the phone\'s own text extraction and the Paste tab.';
   }   // style, not the hidden attribute: .btn sets display
   byId('btnAiRead').addEventListener('click', function () {
     saveCurrent();
