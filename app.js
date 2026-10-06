@@ -321,7 +321,7 @@
     text = text == null ? '' : String(text);
     var result = null;
     if (window.HalalCheck && typeof window.HalalCheck.analyze === 'function') {
-      var runSettings = Object.assign({}, settings, (opts && typeof opts.ocrConfidence === 'number') ? { ocrConfidence: opts.ocrConfidence } : {}, (opts && opts.aiRead) ? { aiRead: true } : {}, (opts && opts.webSource) ? { webSource: opts.webSource } : {});
+      var runSettings = Object.assign({}, settings, (opts && typeof opts.ocrConfidence === 'number') ? { ocrConfidence: opts.ocrConfidence } : {}, (opts && opts.aiRead) ? { aiRead: true } : {}, (opts && opts.webSource) ? { webSource: opts.webSource } : {}, HC_PUBLIC ? { noServer: true } : {});
       try { result = (opts && opts.texts && opts.texts.length > 1 && window.HalalCheck.analyzeMany) ? window.HalalCheck.analyzeMany(opts.texts, runSettings) : window.HalalCheck.analyze(text, runSettings); }
       catch (e) { result = null; console.error('HalalCheck.analyze failed', e); }
     }
@@ -802,7 +802,11 @@
       showOcrError('Camera not available: ' + (err && err.message ? err.message : err) + '. Use "Photograph" instead.');
     });
   }
-  if (HC_PUBLIC) { byId('btnAiRead').style.display = 'none'; byId('btnLiveScan').style.display = 'none'; }   // style, not the hidden attribute: .btn sets display
+  if (HC_PUBLIC) {
+    byId('btnAiRead').style.display = 'none'; byId('btnLiveScan').style.display = 'none';
+    var eng = byId('ocrEngine'); if (eng) { eng.value = 'device'; eng.disabled = true; var o = eng.querySelector('option[value="device"]'); if (o) o.textContent = 'Phone only — this public copy has no server'; }
+    var tip = document.querySelector('.scan-tip, #scanTip'); if (tip) tip.textContent = 'Public copy: text is read on the phone. Fill the frame with the 配料 lines, or drag a box around them; for a cleaner read use the phone\'s own text extraction and the Paste tab.';
+  }   // style, not the hidden attribute: .btn sets display
   byId('btnAiRead').addEventListener('click', function () {
     saveCurrent();
     var photo = scanState.photos[scanState.current] || (scanState.bitmap ? { bitmap: scanState.bitmap, rotation: scanState.rotation, crop: scanState.crop } : null);

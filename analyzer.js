@@ -283,7 +283,7 @@ var HalalCheck = (function () {
     var verdict;
     var dictHaram = maxSev >= 6 && findings[0].source === 'dict';
     if (unreadable && !(alcoholic || dictHaram)) {
-      verdict = { level: 'unknown', title: 'TEXT UNREADABLE — RETAKE', summary: 'The OCR output looks like noise (' + Math.round(coverage * 100) + '% of the characters form known words' + (ocrConf !== null ? ', OCR confidence ' + ocrConf + '%' : '') + '). Any flags below are unreliable. Retake closer and flatter, use the GB10 engine, or paste the text from the phone\'s own text extraction.' };
+      verdict = { level: 'unknown', title: 'TEXT UNREADABLE — RETAKE', summary: 'The OCR output looks like noise (' + Math.round(coverage * 100) + '% of the characters form known words' + (ocrConf !== null ? ', OCR confidence ' + ocrConf + '%' : '') + '). Any flags below are unreliable. ' + (F.noServer ? 'Retake closer and flatter, drag a box around just the 配料 text, or use the phone\'s own text extraction and the Paste tab.' : 'Retake closer and flatter, use the GB10 engine, or paste the text from the phone\'s own text extraction.') + '' };
     } else if (alcoholic || maxSev >= 6) {
       verdict = { level: 'haram', title: 'NOT HALAL', summary: (alcoholic && maxSev < 6 ? 'The label states an alcohol content — this is an alcoholic product.' : 'Contains ' + top(6) + '.') + (unreadable ? ' The rest of the OCR text is noise — retake to confirm.' : '') };
     } else if (maxSev === 5) {
@@ -425,7 +425,7 @@ var HalalCheck = (function () {
     results.forEach(function (r, i) { if (i !== best && !usable(r)) return; r.positives.forEach(function (p) { var k = p.term; if (!pseen[k]) { pseen[k] = true; positives.push(p); } }); });
     findings.sort(function (a, b) { return (b.severity - a.severity) || (a.index - b.index); });
     var anyReadable = results.some(function (r) { return r.ingredientSection.found && !(r.quality && r.quality.unreadable); });
-    var verdict = buildVerdict({ findings: findings, positives: settings.webSource ? [] : positives, section: primary.ingredientSection, alcoholic: results.some(function (r) { return r.alcoholic; }),
+    var verdict = buildVerdict({ noServer: !!settings.noServer, findings: findings, positives: settings.webSource ? [] : positives, section: primary.ingredientSection, alcoholic: results.some(function (r) { return r.alcoholic; }),
       unreadable: anyReadable ? false : (primary.quality ? primary.quality.unreadable : false), coverage: primary.quality ? primary.quality.coverage : 0,
       ocrConf: primary.quality ? primary.quality.ocrConfidence : null, hadChinese: results.some(function (r) { return r.meta.hadChinese; }) });
     return { verdict: verdict, findings: findings, elsewhere: primary.elsewhere.concat(elsewhere), positives: positives, codes: primary.codes, ingredientSection: primary.ingredientSection,

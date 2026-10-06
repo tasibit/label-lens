@@ -5,7 +5,7 @@
  */
 'use strict';
 
-var VERSION = 'v44'; // bump on any precache list change
+var VERSION = 'v45'; // bump on any precache list change
 var CACHE = 'hc-' + VERSION;
 var ASSET_CACHE = 'hc-assets'; // OCR core + language files, written by the page after a complete download (ocr.js)
 var HEAVY = /\/vendor\/(tesseract\/tesseract-core-|lang\/)/;
