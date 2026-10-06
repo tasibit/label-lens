@@ -665,11 +665,11 @@
     });
   }
   function aiTextUsable(t) { t = (t || '').trim(); var body = t.replace(/^配料[:：]?\s*/, '').replace(/\[?unreadable\]?/gi, '').trim(); return !!body && (body.match(/[\u4e00-\u9fff]/g) || []).length >= 6; }
-  function serverOcr(src, onProgress) {
+  function serverOcr(src, onProgress, fast) {
     return makeJpegForServer(src).then(function (blob) {
       return new Promise(function (resolve, reject) {
         var xhr = new XMLHttpRequest();
-        xhr.open('POST', './ocr', true);
+        xhr.open('POST', fast ? './ocr?fast=1' : './ocr', true);
         xhr.timeout = 90000;
         xhr.responseType = 'json';
         xhr.setRequestHeader('Content-Type', 'image/jpeg');
@@ -769,7 +769,7 @@
     full.getContext('2d').drawImage(video, cx, cy, cw, chh, 0, 0, cw, chh);
     live.busy = true; live.lastSent = now;
     liveSetStatus('Reading frame ' + (live.sent + 1) + '…');
-    serverOcr({ source: full, rotate: 0 }, function () {}).then(function (res) {
+    serverOcr({ source: full, rotate: 0 }, function () {}, true).then(function (res) {
       live.sent++;
       var text = (res && res.text || '').trim();
       if (text.length >= 6) {
