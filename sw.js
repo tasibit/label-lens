@@ -5,12 +5,13 @@
  */
 'use strict';
 
-var VERSION = 'v48'; // bump on any precache list change
+var VERSION = 'v49'; // bump on any precache list change
 var CACHE = 'hc-' + VERSION;
 var ASSET_CACHE = 'hc-assets'; // OCR core + language files, written by the page after a complete download (ocr.js)
-var HEAVY = /\/vendor\/(tesseract\/tesseract-core-|lang\/)/;
+var HEAVY = /\/vendor\/(tesseract\/tesseract-core-|lang\/|ppocr\/)/;   // big OCR assets never stream through the SW (Chrome kills idle SWs mid-download)
 
 var PRECACHE_URLS = [
+  './ppocr.js',
   './',
   './index.html',
   './styles.css',

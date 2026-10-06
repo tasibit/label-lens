@@ -54,6 +54,7 @@
     traditional: false,
     ocrLangDefault: 'chi_sim',
     ocrEngine: 'auto',
+    phoneEngine: 'ppocr',
     savePhotos: true,
     enhanceDefault: false
   };
@@ -399,9 +400,9 @@
     if (ph) { drawPreview(); setScanControlsEnabled(true); } else { previewCanvas.classList.add('hidden'); previewPlaceholder.classList.remove('hidden'); setScanControlsEnabled(false); }
     updateCropUi(); renderPhotoStrip();
   }
-  function addPhotoBitmap(bmp) {
+  function addPhotoBitmap(bmp, file) {
     saveCurrent();
-    scanState.photos.push({ bitmap: bmp, rotation: 0, crop: null });
+    scanState.photos.push({ bitmap: bmp, rotation: 0, crop: null, file: file || null });   // the original file gives the phone engine untouched pixels
     selectPhoto(scanState.photos.length - 1);
   }
   function removePhoto(i) {
@@ -475,7 +476,7 @@
     if (!file) return Promise.resolve();
     if (typeof createImageBitmap === 'function') {
       return createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bmp) {
-        addPhotoBitmap(bmp);
+        addPhotoBitmap(bmp, file);
       }).catch(function () {
         return fallbackImgPreview(file);
       });
@@ -487,7 +488,7 @@
     return new Promise(function (resolve) {
       var img = new Image();
       var url = URL.createObjectURL(file);
-      img.onload = function () { addPhotoBitmap(img); URL.revokeObjectURL(url); resolve(); };
+      img.onload = function () { addPhotoBitmap(img, file); URL.revokeObjectURL(url); resolve(); };
       img.onerror = function () { URL.revokeObjectURL(url); resolve(); };
       img.src = url;
     });
@@ -699,10 +700,28 @@
           return null;
         })
       : Promise.resolve(null);
-    return attempt.then(function (serverRes) {
-      if (serverRes) { dbgPhoto.engine = 'server (PP-OCR on GB10)'; return serverRes; }
+    var tesseract = function () {
       dbgPhoto.engine = 'phone (Tesseract)';
       return window.HCOcr.recognize(src.source, { lang: lang, enhance: scanState.enhance, rotate: src.rotate, blockMode: blockMode, onProgress: progressCb });
+    };
+    return attempt.then(function (serverRes) {
+      if (serverRes) { dbgPhoto.engine = 'server (PP-OCR on GB10)'; return serverRes; }
+      // on-phone PP-OCR (same models as GB10, run by onnxruntime-web) when available; Tesseract only as the last resort
+      var pp = window.HCPpocr;
+      if (pp && typeof pp.recognize === 'function' && !window.HC_INLINE && pp.isSupported() && settings.phoneEngine !== 'tesseract') {
+        var untouched = photo && photo.file && !photo.crop && !((photo.rotation || 0) % 360);
+        return (untouched ? Promise.resolve(photo.file) : makeJpegForServer(src)).then(function (blob) {
+          return pp.recognize(blob, { onProgress: progressCb, maxSide: 2000 });   // 2000 = the server's max_side_len; measured 0.83 vs 0.78 similarity at 1600
+        }).then(function (res) {
+          dbgPhoto.engine = 'phone (PP-OCR web)'; dbgPhoto.ppocrMs = res.ms;
+          return { text: res.text || '', confidence: res.confidence, ms: res.ms, engine: 'ppocr-web' };
+        }, function (err) {
+          dbgPhoto.ppocrError = String(err && err.message ? err.message : err);
+          progressCb({ status: 'PP-OCR could not run here — trying the basic reader', progress: 0 });
+          return tesseract();
+        });
+      }
+      return tesseract();
     });
   }
 
@@ -1072,6 +1091,7 @@
     byId('setFlagFlavourings').checked = !!settings.flagFlavourings;
     byId('setOcrLangDefault').value = settings.ocrLangDefault || 'chi_sim';
     if (byId('setOcrEngine')) byId('setOcrEngine').value = settings.ocrEngine || 'auto';
+    if (byId('setPhoneEngine')) byId('setPhoneEngine').value = settings.phoneEngine || 'ppocr';
     if (byId('setSavePhotos')) byId('setSavePhotos').checked = settings.savePhotos !== false;
     byId('setEnhanceDefault').checked = !!settings.enhanceDefault;
     byId('ocrLang').value = settings.ocrLangDefault || 'chi_sim';
@@ -1089,6 +1109,7 @@
       settings.flagFlavourings = e.target.checked; saveSettings(settings);
     });
     if (byId('setOcrEngine')) byId('setOcrEngine').addEventListener('change', function (e) { settings.ocrEngine = e.target.value; saveSettings(settings); });
+    if (byId('setPhoneEngine')) byId('setPhoneEngine').addEventListener('change', function (e) { settings.phoneEngine = e.target.value; saveSettings(settings); });
     if (byId('setSavePhotos')) byId('setSavePhotos').addEventListener('change', function (e) { settings.savePhotos = e.target.checked; saveSettings(settings); });
     byId('setOcrLangDefault').addEventListener('change', function (e) {
       settings.ocrLangDefault = e.target.value; saveSettings(settings);

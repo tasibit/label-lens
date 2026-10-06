@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="stylesheet" href="./styles.css?v=20261006h">
+<link rel="stylesheet" href="./styles.css?v=20261006i">
 </head>
 <body>
 
@@ -67,7 +67,14 @@
         <label for="setOcrEngine">OCR engine</label>
         <select id="setOcrEngine">
           <option value="auto">Auto — GB10 server (PP-OCR) when online, phone when offline</option>
-          <option value="device">Phone only (Tesseract, works offline)</option>
+          <option value="device">Phone only (works offline)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="setPhoneEngine">Phone reader</label>
+        <select id="setPhoneEngine">
+          <option value="ppocr">PP-OCR on the phone — same models as GB10 (about 30 MB, downloaded once)</option>
+          <option value="tesseract">Basic reader (Tesseract, 5 MB) — weaker on packaging</option>
         </select>
       </div>
 
@@ -229,13 +236,14 @@
   <button type="button" class="btn" id="phraseCardClose">Close</button>
 </section>
 
-<script src="./db.js?v=20261006h"></script>
-<script src="./db_ok.js?v=20261006h"></script>
-<script src="./db_codes.js?v=20261006h"></script>
-<script src="./db_products.js?v=20261006h"></script>
-<script src="./analyzer.js?v=20261006h"></script>
+<script src="./db.js?v=20261006i"></script>
+<script src="./db_ok.js?v=20261006i"></script>
+<script src="./db_codes.js?v=20261006i"></script>
+<script src="./db_products.js?v=20261006i"></script>
+<script src="./analyzer.js?v=20261006i"></script>
+<script src="./ppocr.js?v=20261006i"></script>
 <script src="./vendor/tesseract/tesseract.min.js"></script>
-<script src="./ocr.js?v=20261006h"></script>
-<script src="./app.js?v=20261006h"></script>
+<script src="./ocr.js?v=20261006i"></script>
+<script src="./app.js?v=20261006i"></script>
 </body>
 </html>
