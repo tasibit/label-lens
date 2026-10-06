@@ -805,6 +805,15 @@
   if (HC_PUBLIC) {
     byId('btnAiRead').style.display = 'none'; byId('btnLiveScan').style.display = 'none';
     var eng = byId('setOcrEngine'); if (eng) { eng.value = 'device'; eng.disabled = true; Array.prototype.forEach.call(eng.options, function (o) { o.textContent = 'Phone only — this public copy has no server'; }); }
+    var ch = byId('cropHint');
+    if (ch && ch.parentNode) {
+      var guide = document.createElement('div'); guide.className = 'card public-guide'; guide.setAttribute('data-test', 'public-guide');
+      guide.innerHTML = '<h2 class="section-title">Best way to read a label on this copy</h2>' +
+        '<p><strong>iPhone:</strong> open the Camera, point at the 配料 lines, tap the Live Text button (bottom right), tap Select All, Copy. Then open the <strong>Paste</strong> tab here and paste.</p>' +
+        '<p><strong>Android:</strong> Google Lens or Samsung "Extract text" on the label, copy, then the Paste tab.</p>' +
+        '<p class="muted small">The phone\'s own text recognition reads Chinese far better than the built-in reader below, which is a fallback for photos only.</p>';
+      ch.parentNode.insertBefore(guide, ch.parentNode.firstChild);
+    }
     var tip = byId('cropHint'); if (tip) tip.textContent = 'Public copy: text is read on the phone. Fill the frame with the 配料 lines, or drag a box around them; for a cleaner read use the phone\'s own text extraction and the Paste tab.';
   }   // style, not the hidden attribute: .btn sets display
   byId('btnAiRead').addEventListener('click', function () {

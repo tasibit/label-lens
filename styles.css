@@ -513,3 +513,6 @@ details.raw-text pre {
 .pn-zh { font-size: 1.2rem; font-weight: 600; line-height: 1.3; }
 .pn-en { opacity: 0.75; font-size: 0.9rem; letter-spacing: 0.02em; }
 .pn-type { margin-top: 2px; }
+
+.public-guide { border: 1px solid rgba(80,200,120,0.5); }
+.public-guide p { margin: 6px 0; line-height: 1.45; }
