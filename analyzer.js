@@ -75,6 +75,7 @@ var HalalCheck = (function () {
     var src = String(raw || text).replace(/\r/g, ''), firstLine = (src.split('\n')[0] || '').trim();
     var nm = (src.match(/(?:产品名称|品名|名称)[:：]?\s*([^\n]{2,30})/) || [])[1] || (firstLine.length <= 16 ? firstLine : '');
     if (nm) for (var j = 0; j < NF.detect.length; j++) { var dd = NF.detect[j]; if (dd && dd[0] && dd[0] !== '--weak--' && nm.indexOf(dd[0]) >= 0) { strong++; break; } }
+    if (/\d+\s*mm\s*[x×X*]\s*\d+\s*mm|净含量[:：]?\s*\d+\s*[张片抽]|\d+\s*[张片抽]\s*[\/／]\s*[包片袋]/.test(src)) strong++;   // 180mm×180mm, 净含量：1张, 10片/包 = wipes and tissues
     if (FOOD_MARK.test(text) && strong === 0) return 'food';
     if (strong > 0) return 'nonfood';
     return weak >= 2 && !FOOD_MARK.test(text) ? 'nonfood' : 'food';
@@ -564,6 +565,13 @@ var HalalCheck = (function () {
       }
       if (st === 'positive' || st === 'veg') {
         positives.push({ term: e.t, en: e.en, note: e.n, index: m.start, kind: st === 'positive' ? 'halal' : 'veg' });
+        continue;
+      }
+      // "不添加酒精", "不含猪肉", "无明胶", "零添加香精": a declaration that the thing is ABSENT, shown as a positive, never as a finding
+      var pre = text.substr(Math.max(0, m.start - 6), Math.min(6, m.start));
+      var neg = pre.match(/(不主动添加|不另外添加|不会添加|不添加|未添加|无添加|零添加|不含有|不含|不加|零|无)$/);
+      if (neg && st !== 'ok' && st !== 'note') {
+        positives.push({ term: neg[1] + e.t, en: 'declared free of ' + (e.en || e.t), note: 'The label says it contains none. A claim, not a certification.', index: m.start - neg[1].length, kind: 'free' });
         continue;
       }
       var note = e.n;

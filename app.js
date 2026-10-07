@@ -185,7 +185,7 @@
         '<div class="finding-main">' +
           '<div class="finding-term">' + escapeHtml(item.term || '') +
             ' <span class="status-chip" style="background:' + colorForStatus(item.kind === 'veg' ? 'veg' : 'positive') + '">' +
-            escapeHtml(item.kind || 'positive') + '</span></div>' +
+            escapeHtml(item.kind === 'free' ? 'declared free of' : (item.kind || 'positive')) + '</span></div>' +
           (item.en ? '<div class="finding-sub">' + escapeHtml(item.en) + '</div>' : '') +
           (item.note ? '<div class="finding-note">' + escapeHtml(item.note) + '</div>' : '') +
         '</div>' +

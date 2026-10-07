@@ -38,7 +38,9 @@ var HALAL_NONFOOD = {
     ['气垫', 'cushion compact'], ['遮瑕', 'concealer'], ['腮红', 'blush'], ['眼影', 'eyeshadow'], ['眉笔', 'eyebrow pencil'], ['眼线', 'eyeliner'], ['发胶', 'hair spray'],
     ['定型喷雾', 'styling spray'], ['染发', 'hair dye'], ['驱蚊', 'mosquito repellent'], ['驱蚊液', 'mosquito repellent liquid'], ['花露水', 'florida water'],
     ['BB霜', 'BB cream'],
+    ['限用日期', 'use-by date (cosmetics/hygiene)'], ['生活用纸', 'household paper products'], ['皮肤刺激试验', 'skin irritation test'], ['用于皮肤', 'for use on skin'], ['清洁皮肤', 'cleans the skin'], ['中国药典纯化水', 'pharmacopoeia purified water'],
     ['--weak--', ''],
+    ['不添加酒精', 'no alcohol added'], ['不含酒精', 'alcohol-free'], ['皮肤', 'skin'], ['温和不刺激', 'mild, non-irritating'],
     // ---------- weak: these also appear on food packs (desiccant sachets, nutrition panels, drinks, wipes packed with food,
     //            酸辣粉底料 / 米粉饼 contain 粉底 / 粉饼, health-food claims such as 养颜润肤)
     ['湿巾', 'wet wipes'], ['湿纸巾', 'wet tissue'], ['消毒湿巾', 'disinfecting wipes'], ['粉底', 'foundation'], ['粉饼', 'pressed powder'], ['散粉', 'loose powder'],
