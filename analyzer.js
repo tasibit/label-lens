@@ -308,7 +308,6 @@ var HalalCheck = (function () {
       var pg = F.product, lv = pg.level === 'clean' ? 'caution' : (pg.level === 'meat' ? 'doubtful' : pg.level);
       var ttl = { haram: 'NOT HALAL — by product type', likely: 'VERY LIKELY NOT HALAL — by product type', doubtful: 'DOUBTFUL — by product type', caution: 'USUALLY OK — by product type' }[lv] || 'JUDGED BY PRODUCT TYPE';
       verdict = { level: lv, title: ttl, summary: 'No ingredient list on this pack. Judged from the name "' + pg.name + '" (' + pg.en + '). Typical ingredients: ' + pg.typical + '. ' + pg.note + ' If possible, read the big pack it came from.' };
-      if (lv === 'caution') verdict.color = '#558b2f';   // olive: fine by type, not a warning
     } else {
       verdict = { level: 'unknown', title: 'NO INGREDIENT LIST FOUND', summary: 'Could not find 配料 / 原料 in the text and nothing was flagged. Photograph the ingredients panel.' };
     }
@@ -331,6 +330,7 @@ var HalalCheck = (function () {
       }
     }
     verdict.color = COLOR[verdict.level] || COLOR.unknown;
+    if (/^USUALLY OK/.test(verdict.title)) verdict.color = '#558b2f';   // olive: fine by product type, not a warning
     return verdict;
   }
 
