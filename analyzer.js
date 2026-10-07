@@ -389,7 +389,8 @@ var HalalCheck = (function () {
     if (!zh && lines.length) {
       var first = lines[0], cjk = (first.match(/[\u4e00-\u9fff]/g) || []).length;
       var looksName = cjk >= 2 && first.length <= 24 && cjk / first.replace(/\s/g, '').length >= 0.6 && !/[:：\d]/.test(first) && !FIELD_START.test(first);
-      if (looksName && (sectionFound || lines.length === 1)) zh = first;
+      var structured = /过敏原|致敏|产地|净含量|价格|保质期|供应商|生产许可/.test(raw);   // shelf tags and QR pages: name on top, fields below
+      if (looksName && (sectionFound || structured || lines.length === 1)) zh = first;
     }
     if (zh) {
       var idx = lines.indexOf(zh); var nxt = idx >= 0 ? lines[idx + 1] : '';
