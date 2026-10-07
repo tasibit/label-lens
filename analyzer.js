@@ -264,8 +264,10 @@ var HalalCheck = (function () {
         var n = names[i], pos = text.indexOf(n);
         if (pos === -1) continue;
         var sev = LEVEL_SEV[row[1]] || 0;
-        // prefer the longer (more specific) name: 牛肉干 beats 肉干, 猪肉脯 beats 肉脯; among equal lengths the more severe type
-        if (!best || n.length > best.name.length || (n.length === best.name.length && sev > best.sev)) best = { name: n, level: row[1], sev: sev, en: row[2], typical: row[3], note: row[4], index: pos };
+        // Chinese product names end with the head noun (巧克力味云石切片面包 is a 面包, not a 巧克力): a name that ends
+        // where the Chinese run ends is a head match and beats modifiers; then the longer name (牛肉干 beats 肉干), then severity
+        var head = !isCJK(text.charAt(pos + n.length));
+        if (!best || (head && !best.head) || (head === best.head && (n.length > best.name.length || (n.length === best.name.length && sev > best.sev)))) best = { name: n, head: head, level: row[1], sev: sev, en: row[2], typical: row[3], note: row[4], index: pos };
       }
     });
     return best;
