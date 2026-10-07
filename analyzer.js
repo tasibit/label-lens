@@ -308,6 +308,7 @@ var HalalCheck = (function () {
       var pg = F.product, lv = pg.level === 'clean' ? 'caution' : (pg.level === 'meat' ? 'doubtful' : pg.level);
       var ttl = { haram: 'NOT HALAL — by product type', likely: 'VERY LIKELY NOT HALAL — by product type', doubtful: 'DOUBTFUL — by product type', caution: 'USUALLY OK — by product type' }[lv] || 'JUDGED BY PRODUCT TYPE';
       verdict = { level: lv, title: ttl, summary: 'No ingredient list on this pack. Judged from the name "' + pg.name + '" (' + pg.en + '). Typical ingredients: ' + pg.typical + '. ' + pg.note + ' If possible, read the big pack it came from.' };
+      if (lv === 'caution') verdict.color = '#558b2f';   // olive: fine by type, not a warning
     } else {
       verdict = { level: 'unknown', title: 'NO INGREDIENT LIST FOUND', summary: 'Could not find 配料 / 原料 in the text and nothing was flagged. Photograph the ingredients panel.' };
     }
@@ -379,13 +380,19 @@ var HalalCheck = (function () {
   // Product name from the label text: an explicit 产品名称/品名 field, else the first short Chinese line of a structured
   // label (one that has an ingredient section), else a short single-line paste (a sub-packet name). Latin line after it = English name.
   var FIELD_START = /^(配料|主要成分|主要原料|原料|原材料|成份|营养|致敏|过敏|产地|规格|保质期|生产|净含量|储存|贮存|食用|执行|产品标准|地址|电话|价格|等级|计价|供应商|监督|物价|星星)/;
-  function detectName(raw, sectionFound) {
+  function detectName(raw, sectionFound, productName) {
     raw = String(raw || '').replace(/\r/g, '');
     var m = raw.match(/(?:产品名称|食品名称|商品名称|品名)\s*[:：]?\s*([^\n:：]{2,40})/);
     var zh = '', en = '';
     if (m) { zh = m[1].split(/\s{2,}|净含量|规格|配料|主要成分|产地|价格|保质期|生产|储存|贮存/)[0].trim(); }
     var lines = raw.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
     var isLatin = function (l) { return /^[A-Za-z][A-Za-z0-9 &'’.,\-]{2,40}$/.test(l); };
+    if (!zh && productName) {   // a line naming the product type (…可颂, …橡皮糖) beats a brand-only first line
+      for (var li = 0; li < lines.length; li++) {
+        var L = lines[li], c2 = (L.match(/[\u4e00-\u9fff]/g) || []).length;
+        if (L.indexOf(productName) >= 0 && c2 >= 2 && L.length <= 24 && !/[:：]/.test(L) && !FIELD_START.test(L)) { zh = L; break; }
+      }
+    }
     if (!zh && lines.length) {
       var first = lines[0], cjk = (first.match(/[\u4e00-\u9fff]/g) || []).length;
       var looksName = cjk >= 2 && first.length <= 24 && cjk / first.replace(/\s/g, '').length >= 0.6 && !/[:：\d]/.test(first) && !FIELD_START.test(first);
@@ -532,7 +539,7 @@ var HalalCheck = (function () {
       ingredientSection: section,
       segments: segs,
       product: product,
-      name: detectName(rawText, section.found),
+      name: detectName(rawText, section.found, product && product.name),
       alcoholic: alcoholic,
       quality: { coverage: coverage, cjkChars: cjkTotal, ocrConfidence: ocrConf, unreadable: unreadable },
       meta: { normalizedText: text, hadChinese: hadChinese, dbVersion: HALAL_DB.version, appVersion: APP_VERSION, entryCount: getIndex().entries.length }

@@ -276,7 +276,7 @@
     }
 
     if (segmentsHtml) {
-      html += '<div class="card"><h2 class="section-title">Ingredient list in English</h2>' +
+      html += '<div class="card"><h2 class="section-title">' + (result.ingredientSection && result.ingredientSection.found ? 'Ingredient list in English' : 'Text read from the label (no ingredient list)') + '</h2>' +
         '<div class="chip-row">' + segmentsHtml + '</div></div>';
     }
 
