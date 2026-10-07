@@ -5,10 +5,11 @@
 var HalalCheck = (function () {
   'use strict';
 
-  var STATUS = { haram: 6, likely: 5, doubtful: 4, meat: 4, school: 3, caution: 2, review: 1, seafood: 0, note: 0, ok: 0, positive: 0, veg: 0 };
+  var STATUS = { haram: 6, likely: 5, animal: 5, doubtful: 4, unsure: 4, meat: 4, school: 3, caution: 2, review: 1, seafood: 0, note: 0, alcohol: 0, ok: 0, positive: 0, veg: 0 };
   var LABEL = { haram: 'Not halal', likely: 'Likely not halal', doubtful: 'Doubtful — verify source', meat: 'Halal species — slaughter unverified',
     school: 'Depends on school of law', caution: 'Minor caution', review: 'Check sub-ingredients', seafood: 'Seafood (non-fish)', note: 'Note',
-    ok: 'OK', positive: 'Halal indicator', veg: 'Vegetarian indicator' };
+    ok: 'OK', positive: 'Halal indicator', veg: 'Vegetarian indicator',
+    animal: 'Animal-derived', unsure: 'Source unstated (animal or plant)', alcohol: 'Alcohol — acceptable in non-food items' };
   var COLOR = { haram: '#c62828', likely: '#c62828', doubtful: '#ef6c00', caution: '#f9a825', clean: '#2e7d32', unknown: '#616161' };
   var APP_VERSION = '1.0.0';
 
@@ -36,6 +37,87 @@ var HalalCheck = (function () {
     return index;
   }
 
+  // ------------------------------------------------------------------ non-food (cosmetics, hygiene): alcohol acceptable, animal material not
+  var NF = (typeof HALAL_NONFOOD !== 'undefined') ? HALAL_NONFOOD : null;
+  var nfIndex = null;
+  function remapForNonfood(e) {   // a food-dictionary entry seen on a cosmetic label
+    var st = e.s;
+    if (st === 'haram') st = (e.c === 'alcohol' || /酒|醇/.test(e.t)) ? 'alcohol' : 'haram';
+    else if (st === 'likely' || st === 'meat' || st === 'seafood' || st === 'school') st = 'animal';
+    else if (st === 'doubtful' || st === 'caution' || st === 'review') st = 'unsure';
+    else st = 'ok';
+    return { t: e.t, s: st, en: e.en, py: e.py, c: e.c, n: e.n };
+  }
+  function getNonfoodIndex() {
+    if (nfIndex) return nfIndex;
+    var base = getIndex().entries.map(remapForNonfood), byTerm = {}, entries = [];
+    base.forEach(function (e) { byTerm[e.t] = e; });
+    ((NF && NF.entries) || []).forEach(function (r) { if (r && r[0]) byTerm[r[0]] = { t: r[0], s: r[1] || 'ok', en: r[2] || '', py: r[3] || '', c: r[4] || '', n: r[5] || '' }; });
+    Object.keys(byTerm).forEach(function (k) { entries.push(byTerm[k]); });
+    var groups = {}, maxLen = 1;
+    entries.forEach(function (e) { var key = e.t.charAt(0); if (/^[\x00-\x7f]/.test(key)) key = key.toLowerCase(); (groups[key] = groups[key] || []).push(e); if (e.t.length > maxLen) maxLen = e.t.length; });
+    Object.keys(groups).forEach(function (k) { groups[k].sort(function (a, b) { return b.t.length - a.t.length; }); });
+    nfIndex = { groups: groups, maxLen: maxLen, entries: entries };
+    return nfIndex;
+  }
+  var NF_SECTION_STARTS = ['全成分', '主要成分', '产品主要原料', '主要原料', '成分', '成份', '原料', 'Ingredients', 'INGREDIENTS', 'ingredients'];
+  var FOOD_MARK = /配料[:：表]|营养成分|食用方法|食品生产许可|SC\d{12,}/;
+  function detectKind(text, settings, raw) {
+    if (settings && (settings.productKind === 'food' || settings.productKind === 'nonfood')) return settings.productKind;
+    if (!NF || !NF.detect) return 'food';
+    var strong = 0, weak = 0, weakZone = false;
+    for (var i = 0; i < NF.detect.length; i++) {
+      var d = NF.detect[i]; if (!d || !d[0]) continue;
+      if (d[0] === '--weak--') { weakZone = true; continue; }
+      if (text.indexOf(d[0]) >= 0) { if (weakZone) weak++; else strong++; }
+    }
+    // the product name itself (产品名称: 清风湿巾, or a short first line) naming a non-food thing is decisive
+    var src = String(raw || text).replace(/\r/g, ''), firstLine = (src.split('\n')[0] || '').trim();
+    var nm = (src.match(/(?:产品名称|品名|名称)[:：]?\s*([^\n]{2,30})/) || [])[1] || (firstLine.length <= 16 ? firstLine : '');
+    if (nm) for (var j = 0; j < NF.detect.length; j++) { var dd = NF.detect[j]; if (dd && dd[0] && dd[0] !== '--weak--' && nm.indexOf(dd[0]) >= 0) { strong++; break; } }
+    if (FOOD_MARK.test(text) && strong === 0) return 'food';
+    if (strong > 0) return 'nonfood';
+    return weak >= 2 && !FOOD_MARK.test(text) ? 'nonfood' : 'food';
+  }
+  function nonfoodProductGuess(text) {
+    var best = null;
+    ((NF && NF.products) || []).forEach(function (row) {
+      row[0].split('|').forEach(function (n) {
+        var pos = text.indexOf(n); if (pos === -1) return;
+        var head = !isCJK(text.charAt(pos + n.length));
+        if (!best || (head && !best.head) || (head === best.head && n.length > best.name.length)) best = { name: n, head: head, level: row[1], en: row[2], typical: row[3], note: row[4], index: pos, sev: { haram: 6, animal: 5, caution: 2, clean: 0 }[row[1]] || 0 };
+      });
+    });
+    return best;
+  }
+  function buildNonfoodVerdict(F) {
+    var v, findings = F.findings;
+    var top = function (st, n) { return findings.filter(function (f) { return f.status === st; }).slice(0, n || 4).map(function (f) { return f.term + (f.en ? ' (' + f.en + ')' : ''); }).join(', '); };
+    var alcohol = findings.filter(function (f) { return f.status === 'alcohol'; });
+    var alcNote = alcohol.length ? ' Contains alcohol (' + alcohol.map(function (f) { return f.term; }).slice(0, 3).join(', ') + ') — acceptable in a non-food item by your setting.' : '';
+    if (F.unreadable) {
+      v = { level: 'unknown', title: 'TEXT UNREADABLE — RETAKE', summary: 'The OCR output looks like noise. Retake closer and flatter.' };
+    } else if (findings.some(function (f) { return f.status === 'haram'; })) {
+      v = { level: 'haram', title: 'NON-FOOD — PIG-DERIVED INGREDIENT', summary: 'Lists ' + top('haram') + '. Not acceptable.' + alcNote };
+    } else if (findings.some(function (f) { return f.status === 'animal'; })) {
+      v = { level: 'likely', title: 'NON-FOOD — ANIMAL-DERIVED INGREDIENTS', summary: 'Lists ' + top('animal') + '. You asked for non-food items to be free of animal products and by-products.' + alcNote };
+    } else if (findings.some(function (f) { return f.status === 'unsure'; })) {
+      v = { level: 'doubtful', title: 'NON-FOOD — SOURCE UNSTATED', summary: 'Contains ' + top('unsure') + ', which can be made from animal or plant material; the label does not say. Ask the maker or choose another.' + alcNote };
+    } else if (F.section.found) {
+      v = { level: 'clean', title: 'NON-FOOD — NO ANIMAL-DERIVED INGREDIENTS FOUND', summary: 'Ingredient list read; nothing animal-derived in it.' + alcNote };
+    } else if (F.product) {
+      var pl = F.product.level, map = { haram: ['haram', 'NON-FOOD — NOT ACCEPTABLE by product type'], animal: ['likely', 'NON-FOOD — USUALLY ANIMAL-DERIVED by product type'], caution: ['caution', 'NON-FOOD — CHECK THE LIST by product type'], clean: ['caution', 'NON-FOOD — USUALLY OK by product type'] };
+      var mm = map[pl] || map.caution;
+      v = { level: mm[0], title: mm[1], summary: 'No ingredient list read. Judged from the name "' + F.product.name + '" (' + F.product.en + '). Typical ingredients: ' + F.product.typical + '. ' + (F.product.note || '') };
+      if (pl === 'clean') v.color = '#558b2f';
+    } else {
+      v = { level: 'unknown', title: 'NON-FOOD — NO INGREDIENT LIST FOUND', summary: 'Photograph the 成分 / 主要原料 line of the pack.' };
+    }
+    v.kind = 'nonfood';
+    if (!v.color) v.color = COLOR[v.level] || COLOR.unknown;
+    return v;
+  }
+
   // ------------------------------------------------------------------ normalisation
   function normalize(text) {
     if (!text) return '';
@@ -53,8 +135,8 @@ var HalalCheck = (function () {
   }
 
   // ------------------------------------------------------------------ ingredient section
-  function findSection(text) {
-    var starts = HALAL_DB.sectionStart, best = -1, bestLen = 0;
+  function findSection(text, extraStarts) {
+    var starts = extraStarts ? HALAL_DB.sectionStart.concat(extraStarts) : HALAL_DB.sectionStart, best = -1, bestLen = 0;
     for (var i = 0; i < starts.length; i++) {
       var m = starts[i], pos = text.indexOf(m);
       while (pos !== -1) {
@@ -93,8 +175,8 @@ var HalalCheck = (function () {
   }
 
   // ------------------------------------------------------------------ dictionary scan (longest match)
-  function scanDictionary(text) {
-    var idx = getIndex(), matches = [], consumed = new Array(text.length), i = 0, n = text.length;
+  function scanDictionary(text, useIndex) {
+    var idx = useIndex || getIndex(), matches = [], consumed = new Array(text.length), i = 0, n = text.length;
     while (i < n) {
       var ch = text.charAt(i), key = /^[\x00-\x7f]$/.test(ch) ? ch.toLowerCase() : ch;
       var group = idx.groups[key], hit = null;
@@ -435,11 +517,11 @@ var HalalCheck = (function () {
     results.forEach(function (r, i) { if (i !== best && !usable(r)) return; r.positives.forEach(function (p) { var k = p.term; if (!pseen[k]) { pseen[k] = true; positives.push(p); } }); });
     findings.sort(function (a, b) { return (b.severity - a.severity) || (a.index - b.index); });
     var anyReadable = results.some(function (r) { return r.ingredientSection.found && !(r.quality && r.quality.unreadable); });
-    var verdict = buildVerdict({ noServer: !!settings.noServer, findings: findings, positives: settings.webSource ? [] : positives, section: primary.ingredientSection, alcoholic: results.some(function (r) { return r.alcoholic; }),
+    var verdict = (primary.kind === 'nonfood') ? buildNonfoodVerdict({ findings: findings, section: primary.ingredientSection, unreadable: anyReadable ? false : (primary.quality ? primary.quality.unreadable : false), product: primary.product }) : buildVerdict({ noServer: !!settings.noServer, findings: findings, positives: settings.webSource ? [] : positives, section: primary.ingredientSection, alcoholic: results.some(function (r) { return r.alcoholic; }),
       unreadable: anyReadable ? false : (primary.quality ? primary.quality.unreadable : false), coverage: primary.quality ? primary.quality.coverage : 0,
       ocrConf: primary.quality ? primary.quality.ocrConfidence : null, hadChinese: results.some(function (r) { return r.meta.hadChinese; }) });
     return { verdict: verdict, findings: findings, elsewhere: primary.elsewhere.concat(elsewhere), positives: positives, codes: primary.codes, ingredientSection: primary.ingredientSection,
-      segments: primary.segments, name: primary.name || (results.filter(function (r) { return r.name; })[0] || {}).name || null, alcoholic: results.some(function (r) { return r.alcoholic; }), quality: primary.quality, meta: primary.meta, photos: results.length, primaryIndex: stitched ? -1 : best, perPhoto: results, stitched: stitched };
+      segments: primary.segments, kind: primary.kind, name: primary.name || (results.filter(function (r) { return r.name; })[0] || {}).name || null, alcoholic: results.some(function (r) { return r.alcoholic; }), quality: primary.quality, meta: primary.meta, photos: results.length, primaryIndex: stitched ? -1 : best, perPhoto: results, stitched: stitched };
   }
 
   // ------------------------------------------------------------------ main
@@ -454,10 +536,12 @@ var HalalCheck = (function () {
     var flagFlavourings = settings.flagFlavourings === true; // default off: nearly every snack lists 食用香精
     var text = normalize(rawText);
     var hadChinese = /[一-鿿]/.test(text);
-    var section = findSection(text);
-    var scan = scanDictionary(text);
-    var rules = genericRules(text, scan.consumed);
-    var codes = parseCodes(text);
+    var kind = detectKind(text, settings, rawText);
+    var nonfood = kind === 'nonfood';
+    var section = findSection(text, nonfood ? NF_SECTION_STARTS : null);
+    var scan = scanDictionary(text, nonfood ? getNonfoodIndex() : null);
+    var rules = nonfood ? [] : genericRules(text, scan.consumed);   // 肉/骨/血/酒 character rules are food rules
+    var codes = nonfood ? [] : parseCodes(text);
 
     var findings = [], positives = [], seen = {};
     function pushFinding(f) {
@@ -483,8 +567,8 @@ var HalalCheck = (function () {
         continue;
       }
       var note = e.n;
-      if (st === 'seafood' && seafoodStrict) { st = 'school'; note = (note ? note + ' ' : '') + 'Hanafi setting: non-fish seafood flagged.'; }
-      if (st === 'caution' && e.c === 'flavour' && !flagFlavourings) st = 'note';
+      if (!nonfood && st === 'seafood' && seafoodStrict) { st = 'school'; note = (note ? note + ' ' : '') + 'Hanafi setting: non-fish seafood flagged.'; }
+      if (!nonfood && st === 'caution' && e.c === 'flavour' && !flagFlavourings) st = 'note';
       pushFinding({ term: e.t, en: e.en, py: e.py, status: st, category: e.c, note: note, index: m.start, source: 'dict', inSection: section.found && m.start >= section.start && m.start < section.end });
     }
     for (var r = 0; r < rules.length; r++) {
@@ -518,17 +602,19 @@ var HalalCheck = (function () {
     var ocrConf = typeof settings.ocrConfidence === 'number' ? settings.ocrConfidence : null;
     // a confident read (PP-OCR >= 80) with few food words is a readable label WITHOUT a list (shelf tags, QR pages), not noise
     var confident = ocrConf !== null && ocrConf >= 80;
-    var unreadable = (ocrConf !== null && ocrConf < 40 && coverage < 0.6) || (!confident && !section.found && cjkTotal >= 20 && coverage < 0.25) ||
-      (section.found && cjkTotal >= 8 && coverage < 0.3);   // a "list" made of unrecognised words is OCR noise, not a clean list
+    var unreadable = nonfood ? (ocrConf !== null && ocrConf < 40) :   // cosmetic words are not in the food dictionary: only OCR confidence can call a non-food read noise
+      ((ocrConf !== null && ocrConf < 40 && coverage < 0.6) || (!confident && !section.found && cjkTotal >= 20 && coverage < 0.25) ||
+      (section.found && cjkTotal >= 8 && coverage < 0.3));   // a "list" made of unrecognised words is OCR noise, not a clean list
 
     var alcoholic = /酒精度|%\s*vol|vol\s*%|ABV|alc\.?\s*\d|酒精含量/i.test(text);
-    var product = ((!section.found || settings.webSource) && hadChinese) ? productGuess(text) : null;   // with a web list the name still decides when it is worse
-    if (product && product.sev >= 5) { /* a haram/likely product name also appears as a finding so the user sees it */
+    var product = ((!section.found || settings.webSource) && hadChinese) ? (nonfood ? nonfoodProductGuess(text) : productGuess(text)) : null;   // with a web list the name still decides when it is worse
+    if (!nonfood && product && product.sev >= 5) { /* a haram/likely product name also appears as a finding so the user sees it */
       pushFinding({ term: product.name, en: product.en, py: '', status: product.level, category: 'product', note: product.note, index: product.index, source: 'product', inSection: false });
       findings.forEach(function (f) { if (!f.severity) { f.severity = STATUS[f.status] || 0; f.label = LABEL[f.status] || f.status; f.snippet = snippet(text, f.index, f.term.length); } });
       findings.sort(function (a, b) { return (b.severity - a.severity) || (a.index - b.index); });
     }
-    var verdict = buildVerdict({ findings: findings, positives: positives, section: section, alcoholic: alcoholic, unreadable: unreadable && !product, coverage: coverage, ocrConf: ocrConf, hadChinese: hadChinese, aiRead: !!settings.aiRead, aiPartial: !!settings.aiRead && /\[?unreadable\]?/i.test(text), product: product, webSource: settings.webSource || '' });
+    var verdict = nonfood ? buildNonfoodVerdict({ findings: findings, section: section, unreadable: unreadable && !product, product: product })
+      : buildVerdict({ noServer: !!settings.noServer, findings: findings, positives: settings.webSource ? [] : positives, section: section, alcoholic: alcoholic, unreadable: unreadable && !product, coverage: coverage, ocrConf: ocrConf, hadChinese: hadChinese, aiRead: !!settings.aiRead, aiPartial: !!settings.aiRead && /\[?unreadable\]?/i.test(text), product: product, webSource: settings.webSource || '' });
 
     return {
       verdict: verdict,
@@ -539,6 +625,7 @@ var HalalCheck = (function () {
       ingredientSection: section,
       segments: segs,
       product: product,
+      kind: kind,
       name: detectName(rawText, section.found, product && product.name),
       alcoholic: alcoholic,
       quality: { coverage: coverage, cjkChars: cjkTotal, ocrConfidence: ocrConf, unreadable: unreadable },
@@ -554,7 +641,7 @@ var HalalCheck = (function () {
     });
   }
 
-  return { analyze: analyze, analyzeMany: analyzeMany, detectName: detectName, stitchTexts: stitchTexts, normalize: normalize, segment: segment, findSection: findSection, parseCodes: parseCodes, lookup: lookup, STATUS: STATUS, LABEL: LABEL, COLOR: COLOR, VERSION: APP_VERSION };
+  return { analyze: analyze, analyzeMany: analyzeMany, detectName: detectName, detectKind: detectKind, stitchTexts: stitchTexts, normalize: normalize, segment: segment, findSection: findSection, parseCodes: parseCodes, lookup: lookup, STATUS: STATUS, LABEL: LABEL, COLOR: COLOR, VERSION: APP_VERSION };
 })();
 
 if (typeof module !== 'undefined' && module.exports) { module.exports = HalalCheck; }

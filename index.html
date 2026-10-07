@@ -9,7 +9,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="stylesheet" href="./styles.css?v=20261008e">
+<link rel="stylesheet" href="./styles.css?v=20261008f">
 </head>
 <body>
 
@@ -68,6 +68,14 @@
         <select id="setOcrEngine">
           <option value="auto">Auto — GB10 server (PP-OCR) when online, phone when offline</option>
           <option value="device">Phone only (works offline)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="setProductKind">Product kind</label>
+        <select id="setProductKind">
+          <option value="auto">Auto — food unless the label looks like a cosmetic or hygiene product</option>
+          <option value="food">Food (alcohol, pork, gelatin and slaughter rules)</option>
+          <option value="nonfood">Non-food (alcohol acceptable; animal-derived ingredients flagged)</option>
         </select>
       </div>
       <div class="field">
@@ -236,14 +244,15 @@
   <button type="button" class="btn" id="phraseCardClose">Close</button>
 </section>
 
-<script src="./db.js?v=20261008e"></script>
-<script src="./db_ok.js?v=20261008e"></script>
-<script src="./db_codes.js?v=20261008e"></script>
-<script src="./db_products.js?v=20261008e"></script>
-<script src="./analyzer.js?v=20261008e"></script>
-<script src="./ppocr.js?v=20261008e"></script>
+<script src="./db.js?v=20261008f"></script>
+<script src="./db_ok.js?v=20261008f"></script>
+<script src="./db_codes.js?v=20261008f"></script>
+<script src="./db_products.js?v=20261008f"></script>
+<script src="./db_nonfood.js?v=20261008f"></script>
+<script src="./analyzer.js?v=20261008f"></script>
+<script src="./ppocr.js?v=20261008f"></script>
 <script src="./vendor/tesseract/tesseract.min.js"></script>
-<script src="./ocr.js?v=20261008e"></script>
-<script src="./app.js?v=20261008e"></script>
+<script src="./ocr.js?v=20261008f"></script>
+<script src="./app.js?v=20261008f"></script>
 </body>
 </html>

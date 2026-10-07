@@ -516,3 +516,5 @@ details.raw-text pre {
 
 .public-guide { border: 1px solid rgba(80,200,120,0.5); }
 .public-guide p { margin: 6px 0; line-height: 1.45; }
+
+.pn-kind { font-size: 0.8rem; color: #8ab4f8; margin-bottom: 4px; }

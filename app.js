@@ -36,8 +36,8 @@
     doubtful: '#ef6c00', meat: '#ef6c00', school: '#ef6c00',
     caution: '#f9a825', review: '#f9a825', seafood: '#f9a825',
     ok: '#2e7d32', positive: '#2e7d32', veg: '#2e7d32', note: '#2e7d32', clean: '#2e7d32',
-    unknown: '#616161'
-  };
+    unknown: '#616161',
+    animal: '#c62828', unsure: '#ef6c00', alcohol: '#5c6bc0' };
   function colorForStatus(status) { return STATUS_COLOR[status] || STATUS_COLOR.unknown; }
 
   var VERDICT_COLOR = {
@@ -55,6 +55,7 @@
     ocrLangDefault: 'chi_sim',
     ocrEngine: 'auto',
     phoneEngine: 'ppocr',
+    productKind: 'auto',
     savePhotos: true,
     enhanceDefault: false
   };
@@ -232,11 +233,14 @@
     var urls = translateUrls(sourceText);
 
     var html = '';
+    var kindTag = result.kind === 'nonfood' ? '<div class="pn-kind" data-test="kind-nonfood">Non-food item (cosmetic / hygiene): alcohol acceptable, animal-derived ingredients flagged</div>' : '';
     if (result.name && result.name.zh) {
-      html += '<div class="product-name" data-test="product-name"><div class="pn-zh">' + escapeHtml(result.name.zh) + '</div>' + (result.name.en ? '<div class="pn-en">' + escapeHtml(result.name.en) + '</div>' : '') +
+      html += '<div class="product-name" data-test="product-name">' + kindTag + '<div class="pn-zh">' + escapeHtml(result.name.zh) + '</div>' + (result.name.en ? '<div class="pn-en">' + escapeHtml(result.name.en) + '</div>' : '') +
         (result.product && result.product.en ? '<div class="pn-type muted small">Product type: ' + escapeHtml(result.product.en) + ' (' + escapeHtml(result.product.name) + ')</div>' : '') + '</div>';
     } else if (result.product && result.product.en) {
-      html += '<div class="product-name" data-test="product-name"><div class="pn-type muted small">Product type: ' + escapeHtml(result.product.en) + ' (' + escapeHtml(result.product.name) + ')</div></div>';
+      html += '<div class="product-name" data-test="product-name">' + kindTag + '<div class="pn-type muted small">Product type: ' + escapeHtml(result.product.en) + ' (' + escapeHtml(result.product.name) + ')</div></div>';
+    } else if (kindTag) {
+      html += '<div class="product-name" data-test="product-name">' + kindTag + '</div>';
     }
     html += '<div class="verdict-banner" data-test="verdict-banner" data-level="' + escapeHtml(v.level || 'unknown') + '" style="background:' + bannerColor + '">' +
       '<div class="verdict-title">' + escapeHtml(v.title || '') + '</div>' +
@@ -1091,6 +1095,7 @@
     byId('setOcrLangDefault').value = settings.ocrLangDefault || 'chi_sim';
     if (byId('setOcrEngine')) byId('setOcrEngine').value = settings.ocrEngine || 'auto';
     if (byId('setPhoneEngine')) byId('setPhoneEngine').value = settings.phoneEngine || 'ppocr';
+    if (byId('setProductKind')) byId('setProductKind').value = settings.productKind || 'auto';
     if (byId('setSavePhotos')) byId('setSavePhotos').checked = settings.savePhotos !== false;
     byId('setEnhanceDefault').checked = !!settings.enhanceDefault;
     byId('ocrLang').value = settings.ocrLangDefault || 'chi_sim';
@@ -1109,6 +1114,7 @@
     });
     if (byId('setOcrEngine')) byId('setOcrEngine').addEventListener('change', function (e) { settings.ocrEngine = e.target.value; saveSettings(settings); });
     if (byId('setPhoneEngine')) byId('setPhoneEngine').addEventListener('change', function (e) { settings.phoneEngine = e.target.value; saveSettings(settings); });
+    if (byId('setProductKind')) byId('setProductKind').addEventListener('change', function (e) { settings.productKind = e.target.value; saveSettings(settings); });
     if (byId('setSavePhotos')) byId('setSavePhotos').addEventListener('change', function (e) { settings.savePhotos = e.target.checked; saveSettings(settings); });
     byId('setOcrLangDefault').addEventListener('change', function (e) {
       settings.ocrLangDefault = e.target.value; saveSettings(settings);
