@@ -21,6 +21,7 @@
     ['薯片|薯条|乐事|可比克|上好佳', 'caution', 'potato chips', 'potato, oil, salt, flavour powder', 'Meat-flavour varieties (烤肉味, 牛肉味, 鸡汁味) can contain real meat powder — check the flavour name; plain and vegetable flavours are fine.'],
     ['虾条|虾片|龙虾片', 'clean', 'prawn crackers', 'starch, shrimp powder, oil, salt', 'Shrimp content: fine for Shafi\'i, Maliki, Hanbali; Hanafi caution.'],
     ['锅巴|米饼|雪饼|仙贝|旺旺', 'clean', 'rice crackers', 'rice, oil, sugar, salt, soy sauce, flavouring', 'Fine.'],
+    ['可颂|牛角包|羊角面包|丹麦酥|起酥面包|黄油面包', 'caution', 'croissant / Danish pastry', 'flour, butter or margarine, yeast, sugar, egg, emulsifiers', 'Usually fine; 火腿/香肠/培根 (ham, sausage, bacon) fillings are not; margarine emulsifier source unverifiable.'],
     ['饼干|苏打饼干|夹心饼干|威化|曲奇|奥利奥|趣多多', 'caution', 'biscuits / cookies / wafers', 'flour, sugar, vegetable fat or butter, emulsifiers (E471 class), flavouring', 'Usually fine; emulsifier fat source unverifiable; some cookies use 猪油 (lard) — rare in branded packs.'],
     ['蛋卷|凤凰卷|鸡蛋卷', 'caution', 'egg rolls', 'flour, egg, sugar, butter or lard', 'Traditional recipes use lard; branded ones mostly butter or vegetable fat — look for 猪油 on the big pack.'],
     ['蛋黄酥|老婆饼|苏式月饼|鲜肉月饼|桃酥|杏仁酥|绿豆糕|云片糕|牛舌饼|酥饼', 'likely', 'Chinese flaky pastries', 'flour, sugar, lard (猪油) or shortening, fillings', 'Traditional pastry made with lard; 鲜肉月饼 is pork-filled. Treat as non-halal unless the big pack shows 植物油 only or 清真.'],

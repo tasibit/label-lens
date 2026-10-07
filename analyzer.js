@@ -508,7 +508,9 @@ var HalalCheck = (function () {
     segs.forEach(function (sg) { var n = (sg.zh.match(/[\u4e00-\u9fff]/g) || []).length; cjkTotal += n; cjkKnown += Math.round(n * (sg.coverage || 0)); });
     var coverage = cjkTotal ? cjkKnown / cjkTotal : 0;
     var ocrConf = typeof settings.ocrConfidence === 'number' ? settings.ocrConfidence : null;
-    var unreadable = (ocrConf !== null && ocrConf < 40 && coverage < 0.6) || (!section.found && cjkTotal >= 20 && coverage < 0.25) ||
+    // a confident read (PP-OCR >= 80) with few food words is a readable label WITHOUT a list (shelf tags, QR pages), not noise
+    var confident = ocrConf !== null && ocrConf >= 80;
+    var unreadable = (ocrConf !== null && ocrConf < 40 && coverage < 0.6) || (!confident && !section.found && cjkTotal >= 20 && coverage < 0.25) ||
       (section.found && cjkTotal >= 8 && coverage < 0.3);   // a "list" made of unrecognised words is OCR noise, not a clean list
 
     var alcoholic = /酒精度|%\s*vol|vol\s*%|ABV|alc\.?\s*\d|酒精含量/i.test(text);
