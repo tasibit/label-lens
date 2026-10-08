@@ -344,8 +344,10 @@ var HalalCheck = (function () {
     (HALAL_DB.products || []).forEach(function (row) {
       var names = row[0].split('|');
       for (var i = 0; i < names.length; i++) {
-        var n = names[i], pos = text.indexOf(n);
+        var n = names[i], ascii = /^[\x00-\x7f]+$/.test(n);
+        var pos = ascii ? text.toLowerCase().indexOf(n.toLowerCase()) : text.indexOf(n);   // English names (CUSTARD PIE) match case-insensitively
         if (pos === -1) continue;
+        if (ascii && (/[A-Za-z]/.test(text.charAt(pos - 1)) || /[A-Za-z]/.test(text.charAt(pos + n.length)))) continue;   // whole words only
         var sev = LEVEL_SEV[row[1]] || 0;
         // Chinese product names end with the head noun (巧克力味云石切片面包 is a 面包, not a 巧克力): a name that ends
         // where the Chinese run ends is a head match and beats modifiers; then the longer name (牛肉干 beats 肉干), then severity
